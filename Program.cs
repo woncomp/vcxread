@@ -33,41 +33,58 @@ class Program
                 }
                 else
                 {
-                    // 查询所有 Visual Studio 实例
-                    var instances = MSBuildLocator.QueryVisualStudioInstances().ToList();
-                    
-                    // 筛选 VS2022+ (版本 17+) - 必须用于 C++ 项目
-                    var instance = instances
-                        .Where(vs => vs.Version.Major >= 17 && vs.Name.Contains("Visual Studio"))
-                        .OrderByDescending(vs => vs.Version)
-                        .FirstOrDefault();
+                    // 尝试自动查找 Visual Studio
+                    var instance = TryFindVisualStudio();
+                    bool vsFound = false;
                     
                     if (instance == null)
+                    {
+                        // 自动查找失败，尝试常见安装路径
+                        var commonPaths = new[]
+                        {
+                            @"C:\Program Files\Microsoft Visual Studio\2022\Community",
+                            @"C:\Program Files\Microsoft Visual Studio\2022\Professional",
+                            @"C:\Program Files\Microsoft Visual Studio\2022\Enterprise",
+                            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Community",
+                            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Professional",
+                            @"C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise"
+                        };
+                        
+                        foreach (var path in commonPaths)
+                        {
+                            if (Directory.Exists(path))
+                            {
+                                var msbuildPath = Path.Combine(path, "MSBuild", "Current", "Bin");
+                                if (Directory.Exists(msbuildPath))
+                                {
+                                    Console.WriteLine($"从常见路径找到 VS2022: {path}");
+                                    MSBuildLocator.RegisterMSBuildPath(msbuildPath);
+                                    vsFound = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        MSBuildLocator.RegisterInstance(instance);
+                        vsFound = true;
+                    }
+                    
+                    if (!vsFound)
                     {
                         Console.WriteLine("错误：未找到 Visual Studio 2022 或更高版本。");
                         Console.WriteLine("");
                         Console.WriteLine("注意：vcxproj 文件需要 Visual Studio C++ 工具集，不能仅使用 .NET SDK。");
                         Console.WriteLine("请确保已安装 Visual Studio 2022 并包含 '使用 C++ 的桌面开发' 工作负载。");
                         Console.WriteLine("");
-                        Console.WriteLine("或者设置环境变量 VSINSTALLDIR 指向 VS 安装目录，例如：");
-                        Console.WriteLine(@"  set VSINSTALLDIR=C:\Program Files\Microsoft Visual Studio\2022\Community\");
+                        Console.WriteLine("如果 VS2022 已安装但未被检测到，您可以：");
+                        Console.WriteLine("1. 设置环境变量 VSINSTALLDIR 指向 VS 安装目录，例如：");
+                        Console.WriteLine(@"   set VSINSTALLDIR=C:\Program Files\Microsoft Visual Studio\2022\Community\");
                         Console.WriteLine("");
-                        if (instances.Any())
-                        {
-                            Console.WriteLine("找到以下安装（但不符合要求）：");
-                            foreach (var inst in instances)
-                            {
-                                Console.WriteLine($"  - {inst.Name} {inst.Version}");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("未找到任何 Visual Studio 安装。");
-                        }
+                        Console.WriteLine("2. 或重新运行 Visual Studio 安装程序，确保安装了 '使用 C++ 的桌面开发' 工作负载");
                         return 1;
                     }
-                    
-                    MSBuildLocator.RegisterInstance(instance);
                 }
             }
             catch (Exception ex)
@@ -92,6 +109,24 @@ class Program
                 (GenerateOptions opts) => GenerateCommand.Run(opts),
                 errs => 1
             );
+    }
+    
+    static VisualStudioInstance? TryFindVisualStudio()
+    {
+        try
+        {
+            var instances = MSBuildLocator.QueryVisualStudioInstances().ToList();
+            
+            // 筛选 VS2022+ (版本 17+) 且名称包含 "Visual Studio"
+            return instances
+                .Where(vs => vs.Version.Major >= 17 && vs.Name.Contains("Visual Studio"))
+                .OrderByDescending(vs => vs.Version)
+                .FirstOrDefault();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
 
