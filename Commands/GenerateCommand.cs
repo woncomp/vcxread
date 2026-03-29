@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using VcxprojParser.Core;
 
@@ -69,7 +70,11 @@ public static class GenerateCommand
             command = c.Command
         });
         
-        var options = new JsonSerializerOptions { WriteIndented = true };
+        var options = new JsonSerializerOptions 
+        { 
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
         var json = JsonSerializer.Serialize(output, options);
         
         File.WriteAllText(outputPath, json);
