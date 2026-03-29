@@ -63,20 +63,26 @@ public static class GenerateCommand
     {
         var commands = analyzer.GetCompileCommands(compilerPath);
         
-        var output = commands.Select(c => new 
+        if (commands.Count == 0)
+        {
+            throw new InvalidOperationException("No compilation units found");
+        }
+        
+        // Use explicit type instead of anonymous type for SingleFile compatibility
+        var output = commands.Select(c => new CompileCommandOutput
         {
             directory = c.Directory,
             file = c.File,
             command = c.Command
-        });
+        }).ToList();
         
         var options = new JsonSerializerOptions 
         { 
             WriteIndented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
-        var json = JsonSerializer.Serialize(output, options);
         
+        var json = JsonSerializer.Serialize(output, options);
         File.WriteAllText(outputPath, json);
     }
     
@@ -150,4 +156,12 @@ public static class GenerateCommand
         
         return args;
     }
+}
+
+// Explicit type for JSON serialization (SingleFile compatible)
+public class CompileCommandOutput
+{
+    public string directory { get; set; } = "";
+    public string file { get; set; } = "";
+    public string command { get; set; } = "";
 }

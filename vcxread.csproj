@@ -10,20 +10,23 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <!-- 禁用 ReadyToRun 和 SingleFile：与 MSBuildLocator 动态加载冲突 -->
+    <!-- SingleFile: Enabled (requires .NET 7.0 compatible packages) -->
+    <!-- ReadyToRun: Disabled (conflicts with MSBuildLocator dynamic loading) -->
+    <PublishSingleFile>true</PublishSingleFile>
     <PublishReadyToRun>false</PublishReadyToRun>
-    <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
-    <PackageReference Include="Microsoft.Build" Version="17.11.4">
+    <PackageReference Include="Microsoft.Build" Version="17.7.2">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Build.Locator" Version="1.7.8" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Build.Locator" Version="1.6.10" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
+    <PackageReference Include="System.Text.Json" Version="7.0.3" />
   </ItemGroup>
 
 </Project>
