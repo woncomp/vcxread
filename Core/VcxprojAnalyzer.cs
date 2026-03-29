@@ -281,53 +281,8 @@ public class VcxprojAnalyzer
             }
         }
         
-        // 获取通用编译参数
-        var includeDirs = _project.GetPropertyValue("AdditionalIncludeDirectories");
-        var preprocessorDefs = _project.GetPropertyValue("PreprocessorDefinitions");
-        var additionalOptions = _project.GetPropertyValue("AdditionalOptions");
-        var cppStandard = _project.GetPropertyValue("LanguageStandard");
-        
-        // 构建基本参数
-        var baseArgs = new List<string>();
-        
-        // 包含目录
-        if (!string.IsNullOrEmpty(includeDirs))
-        {
-            foreach (var inc in includeDirs.Split(';'))
-            {
-                if (!string.IsNullOrWhiteSpace(inc))
-                {
-                    var expandedInc = inc.Trim();
-                    if (!expandedInc.Contains(':'))
-                    {
-                        // 相对路径转为绝对路径
-                        expandedInc = Path.GetFullPath(Path.Combine(projectDir, expandedInc));
-                    }
-                    baseArgs.Add($"/I\"{expandedInc.Replace('\\', '/')}\"");
-                }
-            }
-        }
-        
-        // 预处理器定义
-        if (!string.IsNullOrEmpty(preprocessorDefs))
-        {
-            foreach (var def in preprocessorDefs.Split(';'))
-            {
-                if (!string.IsNullOrWhiteSpace(def))
-                {
-                    baseArgs.Add($"/D{def.Trim()}");
-                }
-            }
-        }
-        
-        // C++ 标准
-        if (!string.IsNullOrEmpty(cppStandard))
-        {
-            if (cppStandard.StartsWith("stdcpp"))
-            {
-                baseArgs.Add($"/std:c++{cppStandard.Substring(6)}");
-            }
-        }
+        // 获取通用编译参数（从项目级别）
+        var baseArgs = BuildCompileArgs(_project, projectDir);
         
         // 遍历编译单元
         foreach (ProjectItem item in _project.GetItems("ClCompile"))
@@ -342,13 +297,14 @@ public class VcxprojAnalyzer
                 continue;
             }
             
+            // 为每个文件构建参数（继承基础参数 + 文件特定参数）
             var args = new List<string>(baseArgs);
             
-            // 移除 PCH 参数
-            // args.RemoveAll(a => a.StartsWith("/Yu") || a.StartsWith("/Yc") || a.StartsWith("/Fp"));
+            // 添加文件特定的编译选项
+            AddFileSpecificArgs(item, args, projectDir);
             
             // 添加文件
-            args.Add($"\"{fullPath.Replace('\\', '/')}\"");
+            args.Add($"-c \"{fullPath.Replace('\\', '/')}\"");
             
             commands.Add(new CompileCommand
             {
@@ -359,6 +315,156 @@ public class VcxprojAnalyzer
         }
         
         return commands;
+    }
+    
+    /// <summary>
+    /// 构建项目级别的编译参数
+    /// </summary>
+    private List<string> BuildCompileArgs(Project project, string projectDir)
+    {
+        var args = new List<string>();
+        
+        // 1. 包含目录 - 从 IncludePath 和 AdditionalIncludeDirectories
+        var includePath = project.GetPropertyValue("IncludePath");
+        var additionalIncludeDirs = project.GetPropertyValue("AdditionalIncludeDirectories");
+        
+        // 合并并去重
+        var allIncludes = new HashSet<string>();
+        
+        if (!string.IsNullOrEmpty(includePath))
+        {
+            foreach (var inc in includePath.Split(';'))
+            {
+                if (!string.IsNullOrWhiteSpace(inc) && !inc.Contains("$(")) // 跳过未展开的宏
+                {
+                    allIncludes.Add(inc.Trim());
+                }
+            }
+        }
+        
+        if (!string.IsNullOrEmpty(additionalIncludeDirs))
+        {
+            foreach (var inc in additionalIncludeDirs.Split(';'))
+            {
+                if (!string.IsNullOrWhiteSpace(inc) && !inc.Contains("$("))
+                {
+                    allIncludes.Add(inc.Trim());
+                }
+            }
+        }
+        
+        foreach (var inc in allIncludes)
+        {
+            var expandedInc = inc;
+            if (!expandedInc.Contains(':') && !expandedInc.StartsWith("/"))
+            {
+                // 相对路径转为绝对路径
+                expandedInc = Path.GetFullPath(Path.Combine(projectDir, expandedInc));
+            }
+            args.Add($"/I\"{expandedInc.Replace('\\', '/')}\"");
+        }
+        
+        // 2. 预处理器定义
+        var preprocessorDefs = project.GetPropertyValue("PreprocessorDefinitions");
+        if (!string.IsNullOrEmpty(preprocessorDefs))
+        {
+            foreach (var def in preprocessorDefs.Split(';'))
+            {
+                if (!string.IsNullOrWhiteSpace(def) && !def.Contains("$("))
+                {
+                    args.Add($"/D{def.Trim()}");
+                }
+            }
+        }
+        
+        // 3. C++ 标准
+        var cppStandard = project.GetPropertyValue("LanguageStandard");
+        if (!string.IsNullOrEmpty(cppStandard))
+        {
+            if (cppStandard.StartsWith("stdcpp"))
+            {
+                args.Add($"/std:c++{cppStandard.Substring(6)}");
+            }
+        }
+        
+        // 4. 其他重要选项
+        var warningLevel = project.GetPropertyValue("WarningLevel");
+        if (!string.IsNullOrEmpty(warningLevel))
+        {
+            args.Add($"/W{warningLevel}");
+        }
+        
+        var treatWarningAsError = project.GetPropertyValue("TreatWarningAsError");
+        if (treatWarningAsError.Equals("true", StringComparison.OrdinalIgnoreCase))
+        {
+            args.Add("/WX");
+        }
+        
+        // 5. AdditionalOptions
+        var additionalOptions = project.GetPropertyValue("AdditionalOptions");
+        if (!string.IsNullOrEmpty(additionalOptions))
+        {
+            // 过滤掉 PCH 相关参数
+            var filteredOptions = additionalOptions
+                .Split(' ')
+                .Where(opt => !string.IsNullOrWhiteSpace(opt) 
+                    && !opt.StartsWith("/Yu", StringComparison.OrdinalIgnoreCase)
+                    && !opt.StartsWith("/Yc", StringComparison.OrdinalIgnoreCase)
+                    && !opt.StartsWith("/Fp", StringComparison.OrdinalIgnoreCase));
+            args.AddRange(filteredOptions);
+        }
+        
+        return args;
+    }
+    
+    /// <summary>
+    /// 添加文件特定的编译参数
+    /// </summary>
+    private void AddFileSpecificArgs(ProjectItem item, List<string> args, string projectDir)
+    {
+        // 文件特定的包含目录
+        var fileIncludes = item.GetMetadataValue("AdditionalIncludeDirectories");
+        if (!string.IsNullOrEmpty(fileIncludes))
+        {
+            foreach (var inc in fileIncludes.Split(';'))
+            {
+                if (!string.IsNullOrWhiteSpace(inc) && !inc.Contains("$("))
+                {
+                    var expandedInc = inc.Trim();
+                    if (!expandedInc.Contains(':'))
+                    {
+                        expandedInc = Path.GetFullPath(Path.Combine(projectDir, expandedInc));
+                    }
+                    args.Add($"/I\"{expandedInc.Replace('\\', '/')}\"");
+                }
+            }
+        }
+        
+        // 文件特定的预处理器定义
+        var fileDefs = item.GetMetadataValue("PreprocessorDefinitions");
+        if (!string.IsNullOrEmpty(fileDefs))
+        {
+            foreach (var def in fileDefs.Split(';'))
+            {
+                if (!string.IsNullOrWhiteSpace(def) && !def.Contains("$("))
+                {
+                    args.Add($"/D{def.Trim()}");
+                }
+            }
+        }
+        
+        // 文件特定的附加选项
+        var fileOptions = item.GetMetadataValue("AdditionalOptions");
+        if (!string.IsNullOrEmpty(fileOptions))
+        {
+            var filteredOptions = fileOptions
+                .Split(' ')
+                .Where(opt => !string.IsNullOrWhiteSpace(opt) 
+                    && !opt.StartsWith("/Yu", StringComparison.OrdinalIgnoreCase)
+                    && !opt.StartsWith("/Yc", StringComparison.OrdinalIgnoreCase)
+                    && !opt.StartsWith("/Fp", StringComparison.OrdinalIgnoreCase));
+            args.AddRange(filteredOptions);
+        }
     }
 }
 
