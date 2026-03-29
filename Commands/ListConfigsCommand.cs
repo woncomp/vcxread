@@ -14,7 +14,7 @@ public static class ListConfigsCommand
             
             var configs = analyzer.GetAvailableConfigurations();
             
-            // 输出 JSON
+            // Output JSON
             Console.WriteLine("{");
             Console.WriteLine($"  \"default\": {{ \"config\": \"{configs.FirstOrDefault()?.Config ?? "Debug"}\", \"platform\": \"{configs.FirstOrDefault()?.Platform ?? "Win32"}\" }},");
             Console.WriteLine("  \"available\": [");
@@ -33,7 +33,7 @@ public static class ListConfigsCommand
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"错误: {ex.Message}");
+            Console.WriteLine($"Error: {ex.Message}");
             if (opts.Verbose) Console.WriteLine(ex.StackTrace);
             return opts.Strict ? 1 : 0;
         }

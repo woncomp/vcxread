@@ -18,30 +18,30 @@ public class VcxprojAnalyzer
         
         if (!File.Exists(_vcxprojPath))
         {
-            throw new FileNotFoundException($"找不到 vcxproj 文件: {_vcxprojPath}");
+            throw new FileNotFoundException($"vcxproj file not found: {_vcxprojPath}");
         }
     }
     
     /// <summary>
-    /// 加载项目但不指定配置（用于 list-configs）
+    /// Load project without specifying configuration (used for list-configs)
     /// </summary>
     public void LoadProjectWithoutConfig()
     {
-        // 使用空全局属性加载，只获取配置列表
+        // Load with empty global properties to get configuration list only
         _project = new Project(_vcxprojPath, null, null);
     }
     
     /// <summary>
-    /// 加载项目并指定配置
+    /// Load project with specified configuration
     /// </summary>
     public void LoadProject(string? config = null, string? platform = null, string? solutionPath = null)
     {
         var globalProperties = new Dictionary<string, string>();
         
-        // 查找并验证 solution
+        // Find and validate solution
         var solutionDir = FindAndValidateSolution(solutionPath);
         
-        // 设置全局属性
+        // Set global properties
         if (!string.IsNullOrEmpty(config))
         {
             globalProperties["Configuration"] = config;
@@ -56,7 +56,7 @@ public class VcxprojAnalyzer
         {
             globalProperties["SolutionDir"] = solutionDir.Replace('\\', '/');
             
-            // 查找 solution 文件路径
+            // Find solution file path
             var solutionFile = Directory.GetFiles(Path.GetDirectoryName(solutionDir.TrimEnd('/'))!, "*.sln").FirstOrDefault();
             if (!string.IsNullOrEmpty(solutionFile))
             {
@@ -67,7 +67,7 @@ public class VcxprojAnalyzer
         
         if (_verbose)
         {
-            Console.WriteLine("全局属性:");
+            Console.WriteLine("Global properties:");
             foreach (var prop in globalProperties)
             {
                 Console.WriteLine($"  {prop.Key} = {prop.Value}");
@@ -78,34 +78,34 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 查找并验证 solution
+    /// Find and validate solution
     /// </summary>
     private string FindAndValidateSolution(string? manualSolutionPath)
     {
         string? solutionFile = null;
         
-        // 如果手动指定了 solution 路径
+        // If solution path is manually specified
         if (!string.IsNullOrEmpty(manualSolutionPath))
         {
             if (!File.Exists(manualSolutionPath))
             {
-                throw new FileNotFoundException($"找不到指定的 solution 文件: {manualSolutionPath}");
+                throw new FileNotFoundException($"Specified solution file not found: {manualSolutionPath}");
             }
             solutionFile = Path.GetFullPath(manualSolutionPath);
         }
         else
         {
-            // 自动向上查找 .sln 文件
+            // Auto-search upward for .sln file
             var currentDir = Path.GetDirectoryName(_vcxprojPath);
             for (int i = 0; i < 3 && currentDir != null; i++)
             {
                 var slnFiles = Directory.GetFiles(currentDir, "*.sln");
                 if (slnFiles.Length > 0)
                 {
-                    solutionFile = slnFiles[0]; // 取第一个
+                    solutionFile = slnFiles[0]; // Use the first one
                     if (slnFiles.Length > 1 && _verbose)
                     {
-                        Console.WriteLine($"警告: 发现多个 .sln 文件，使用: {Path.GetFileName(solutionFile)}");
+                        Console.WriteLine($"Warning: Multiple .sln files found, using: {Path.GetFileName(solutionFile)}");
                     }
                     break;
                 }
@@ -115,25 +115,25 @@ public class VcxprojAnalyzer
         
         if (string.IsNullOrEmpty(solutionFile))
         {
-            throw new FileNotFoundException("未找到 .sln 文件。请使用 --solution-path 手动指定。");
+            throw new FileNotFoundException(".sln file not found. Please specify manually using --solution-path.");
         }
         
-        // 验证 solution 是否包含此 vcxproj
+        // Validate if solution contains this vcxproj
         if (!ValidateSolutionContainsProject(solutionFile))
         {
-            throw new InvalidOperationException($"Solution 文件不包含项目: {Path.GetFileName(_vcxprojPath)}");
+            throw new InvalidOperationException($"Solution file does not contain project: {Path.GetFileName(_vcxprojPath)}");
         }
         
         if (_verbose)
         {
-            Console.WriteLine($"使用 Solution: {solutionFile}");
+            Console.WriteLine($"Using Solution: {solutionFile}");
         }
         
         return Path.GetDirectoryName(solutionFile)!.Replace('\\', '/') + "/";
     }
     
     /// <summary>
-    /// 验证 solution 是否包含目标 vcxproj
+    /// Validate if solution contains target vcxproj
     /// </summary>
     private bool ValidateSolutionContainsProject(string solutionFile)
     {
@@ -142,8 +142,8 @@ public class VcxprojAnalyzer
             var solutionContent = File.ReadAllText(solutionFile);
             var projectName = Path.GetFileName(_vcxprojPath);
             
-            // 在 solution 文件中查找项目引用
-            // 格式: Project("{GUID}") = "Name", "Relative\Path\To\Project.vcxproj", "{ProjectGUID}"
+            // Search for project reference in solution file
+            // Format: Project("{GUID}") = "Name", "Relative\Path\To\Project.vcxproj", "{ProjectGUID}"
             return solutionContent.Contains(projectName);
         }
         catch
@@ -153,18 +153,18 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 获取所有可用配置
+    /// Get all available configurations
     /// </summary>
     public List<ConfigurationInfo> GetAvailableConfigurations()
     {
         if (_project == null)
         {
-            throw new InvalidOperationException("项目未加载");
+            throw new InvalidOperationException("Project not loaded");
         }
         
         var configs = new List<ConfigurationInfo>();
         
-        // 从 ProjectConfiguration 项获取配置列表
+        // Get configuration list from ProjectConfiguration items
         foreach (ProjectItem item in _project.GetItems("ProjectConfiguration"))
         {
             var include = item.EvaluatedInclude;
@@ -179,13 +179,13 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 获取编译单元（ClCompile）
+    /// Get compilation units (ClCompile)
     /// </summary>
     public List<CompileUnit> GetCompilationUnits()
     {
         if (_project == null)
         {
-            throw new InvalidOperationException("项目未加载");
+            throw new InvalidOperationException("Project not loaded");
         }
         
         var units = new List<CompileUnit>();
@@ -196,7 +196,7 @@ public class VcxprojAnalyzer
             var filePath = item.EvaluatedInclude;
             var fullPath = Path.GetFullPath(Path.Combine(projectDir, filePath));
             
-            // 检查是否被排除
+            // Check if excluded from build
             var excludedFromBuild = item.GetMetadataValue("ExcludedFromBuild");
             var isExcluded = excludedFromBuild.Equals("true", StringComparison.OrdinalIgnoreCase);
             
@@ -212,19 +212,19 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 获取所有引用文件
+    /// Get all referenced files
     /// </summary>
     public List<ReferencedFile> GetAllReferencedFiles()
     {
         if (_project == null)
         {
-            throw new InvalidOperationException("项目未加载");
+            throw new InvalidOperationException("Project not loaded");
         }
         
         var files = new List<ReferencedFile>();
         var projectDir = Path.GetDirectoryName(_vcxprojPath)!;
         
-        // 获取所有 Item 类型
+        // Get all Item types
         var itemTypes = new[] { "ClCompile", "ClInclude", "ResourceCompile", "None", "Text", "Image", "Manifest", "FxCompile" };
         
         foreach (var itemType in itemTypes)
@@ -234,11 +234,11 @@ public class VcxprojAnalyzer
                 var filePath = item.EvaluatedInclude;
                 var fullPath = Path.GetFullPath(Path.Combine(projectDir, filePath));
                 
-                // 检查是否被排除
+                // Check if excluded from build
                 var excludedFromBuild = item.GetMetadataValue("ExcludedFromBuild");
                 var isExcluded = excludedFromBuild.Equals("true", StringComparison.OrdinalIgnoreCase);
                 
-                // 映射类型名称
+                // Map type names
                 var displayType = itemType switch
                 {
                     "FxCompile" => "hlsl",
@@ -258,22 +258,22 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 获取编译命令（用于 generate）
+    /// Get compile commands (used for generate)
     /// </summary>
     public List<CompileCommand> GetCompileCommands(string? compilerPath = null)
     {
         if (_project == null)
         {
-            throw new InvalidOperationException("项目未加载");
+            throw new InvalidOperationException("Project not loaded");
         }
         
         var commands = new List<CompileCommand>();
         var projectDir = Path.GetDirectoryName(_vcxprojPath)!;
         
-        // 获取编译器路径
+        // Get compiler path
         if (string.IsNullOrEmpty(compilerPath))
         {
-            // 从项目属性获取或使用默认
+            // Get from project properties or use default
             compilerPath = _project.GetPropertyValue("VCExecutablePath");
             if (string.IsNullOrEmpty(compilerPath))
             {
@@ -281,29 +281,29 @@ public class VcxprojAnalyzer
             }
         }
         
-        // 获取通用编译参数（从项目级别）
+        // Get common compile arguments (from project level)
         var baseArgs = BuildCompileArgs(_project, projectDir);
         
-        // 遍历编译单元
+        // Iterate through compilation units
         foreach (ProjectItem item in _project.GetItems("ClCompile"))
         {
             var filePath = item.EvaluatedInclude;
             var fullPath = Path.GetFullPath(Path.Combine(projectDir, filePath));
             
-            // 检查是否被排除
+            // Check if excluded from build
             var excludedFromBuild = item.GetMetadataValue("ExcludedFromBuild");
             if (excludedFromBuild.Equals("true", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
             
-            // 为每个文件构建参数（继承基础参数 + 文件特定参数）
+            // Build arguments for each file (inherit base args + file-specific args)
             var args = new List<string>(baseArgs);
             
-            // 添加文件特定的编译选项
+            // Add file-specific compile options
             AddFileSpecificArgs(item, args, projectDir);
             
-            // 添加文件
+            // Add file
             args.Add($"-c \"{fullPath.Replace('\\', '/')}\"");
             
             commands.Add(new CompileCommand
@@ -318,24 +318,24 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 构建项目级别的编译参数
+    /// Build project-level compile arguments
     /// </summary>
     private List<string> BuildCompileArgs(Project project, string projectDir)
     {
         var args = new List<string>();
         
-        // 1. 包含目录 - 从 IncludePath 和 AdditionalIncludeDirectories
+        // 1. Include directories - from IncludePath and AdditionalIncludeDirectories
         var includePath = project.GetPropertyValue("IncludePath");
         var additionalIncludeDirs = project.GetPropertyValue("AdditionalIncludeDirectories");
         
-        // 合并并去重
+        // Merge and deduplicate
         var allIncludes = new HashSet<string>();
         
         if (!string.IsNullOrEmpty(includePath))
         {
             foreach (var inc in includePath.Split(';'))
             {
-                if (!string.IsNullOrWhiteSpace(inc) && !inc.Contains("$(")) // 跳过未展开的宏
+                if (!string.IsNullOrWhiteSpace(inc) && !inc.Contains("$(")) // Skip unexpanded macros
                 {
                     allIncludes.Add(inc.Trim());
                 }
@@ -358,13 +358,13 @@ public class VcxprojAnalyzer
             var expandedInc = inc;
             if (!expandedInc.Contains(':') && !expandedInc.StartsWith("/"))
             {
-                // 相对路径转为绝对路径
+                // Convert relative path to absolute path
                 expandedInc = Path.GetFullPath(Path.Combine(projectDir, expandedInc));
             }
             args.Add($"/I\"{expandedInc.Replace('\\', '/')}\"");
         }
         
-        // 2. 预处理器定义
+        // 2. Preprocessor definitions
         var preprocessorDefs = project.GetPropertyValue("PreprocessorDefinitions");
         if (!string.IsNullOrEmpty(preprocessorDefs))
         {
@@ -377,7 +377,7 @@ public class VcxprojAnalyzer
             }
         }
         
-        // 3. C++ 标准
+        // 3. C++ standard
         var cppStandard = project.GetPropertyValue("LanguageStandard");
         if (!string.IsNullOrEmpty(cppStandard))
         {
@@ -387,7 +387,7 @@ public class VcxprojAnalyzer
             }
         }
         
-        // 4. 其他重要选项
+        // 4. Other important options
         var warningLevel = project.GetPropertyValue("WarningLevel");
         if (!string.IsNullOrEmpty(warningLevel))
         {
@@ -404,7 +404,7 @@ public class VcxprojAnalyzer
         var additionalOptions = project.GetPropertyValue("AdditionalOptions");
         if (!string.IsNullOrEmpty(additionalOptions))
         {
-            // 过滤掉 PCH 相关参数
+            // Filter out PCH-related parameters
             var filteredOptions = additionalOptions
                 .Split(' ')
                 .Where(opt => !string.IsNullOrWhiteSpace(opt) 
@@ -418,11 +418,11 @@ public class VcxprojAnalyzer
     }
     
     /// <summary>
-    /// 添加文件特定的编译参数
+    /// Add file-specific compile arguments
     /// </summary>
     private void AddFileSpecificArgs(ProjectItem item, List<string> args, string projectDir)
     {
-        // 文件特定的包含目录
+        // File-specific include directories
         var fileIncludes = item.GetMetadataValue("AdditionalIncludeDirectories");
         if (!string.IsNullOrEmpty(fileIncludes))
         {
@@ -440,7 +440,7 @@ public class VcxprojAnalyzer
             }
         }
         
-        // 文件特定的预处理器定义
+        // File-specific preprocessor definitions
         var fileDefs = item.GetMetadataValue("PreprocessorDefinitions");
         if (!string.IsNullOrEmpty(fileDefs))
         {
@@ -453,7 +453,7 @@ public class VcxprojAnalyzer
             }
         }
         
-        // 文件特定的附加选项
+        // File-specific additional options
         var fileOptions = item.GetMetadataValue("AdditionalOptions");
         if (!string.IsNullOrEmpty(fileOptions))
         {

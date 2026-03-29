@@ -14,7 +14,7 @@ public static class ListUnitsCommand
             
             var units = analyzer.GetCompilationUnits();
             
-            // 输出 JSON
+            // Output JSON
             var options = new JsonSerializerOptions { WriteIndented = true };
             var output = units.Select(u => new 
             {
@@ -29,7 +29,7 @@ public static class ListUnitsCommand
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"错误: {ex.Message}");
+            Console.WriteLine($"Error: {ex.Message}");
             if (opts.Verbose) Console.WriteLine(ex.StackTrace);
             return opts.Strict ? 1 : 0;
         }

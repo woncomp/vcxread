@@ -8,41 +8,41 @@ class Program
 {
     static int Main(string[] args)
     {
-        // 检查是否有 verbose 参数（在解析参数前检查）
+        // Check for verbose parameter (before parsing arguments)
         bool verbose = args.Contains("-v") || args.Contains("--verbose");
         
-        // 注册 MSBuild 定位器
+        // Register MSBuild locator
         if (!MSBuildLocator.IsRegistered)
         {
             try
             {
-                // 检查环境变量是否手动指定了 VS 路径
+                // Check if VS path is manually specified via environment variable
                 var vsPath = Environment.GetEnvironmentVariable("VSINSTALLDIR")?.Trim();
                 if (!string.IsNullOrEmpty(vsPath) && Directory.Exists(vsPath))
                 {
-                    if (verbose) Console.WriteLine($"使用环境变量指定的 VS 路径: {vsPath}");
-                    // 尝试从该路径注册 MSBuild
+                    if (verbose) Console.WriteLine($"Using VS path from environment variable: {vsPath}");
+                    // Try to register MSBuild from this path
                     var msbuildPath = Path.Combine(vsPath, "MSBuild", "Current", "Bin", "MSBuild.exe");
                     if (File.Exists(msbuildPath))
                     {
-                        // 使用 RegisterMSBuildPath 注册指定路径
+                        // Use RegisterMSBuildPath to register the specified path
                         MSBuildLocator.RegisterMSBuildPath(Path.GetDirectoryName(msbuildPath)!);
                     }
                     else
                     {
-                        if (verbose) Console.WriteLine($"错误：在 {vsPath} 中未找到 MSBuild");
+                        if (verbose) Console.WriteLine($"Error: MSBuild not found in {vsPath}");
                         return 1;
                     }
                 }
                 else
                 {
-                    // 尝试自动查找 Visual Studio
+                    // Try to automatically find Visual Studio
                     var instance = TryFindVisualStudio();
                     bool vsFound = false;
                     
                     if (instance == null)
                     {
-                        // 自动查找失败，尝试常见安装路径
+                        // Auto-detection failed, try common installation paths
                         var commonPaths = new[]
                         {
                             @"C:\Program Files\Microsoft Visual Studio\2022\Community",
@@ -60,7 +60,7 @@ class Program
                                 var msbuildPath = Path.Combine(path, "MSBuild", "Current", "Bin");
                                 if (Directory.Exists(msbuildPath))
                                 {
-                                    if (verbose) Console.WriteLine($"从常见路径找到 VS2022: {path}");
+                                    if (verbose) Console.WriteLine($"Found VS2022 from common path: {path}");
                                     MSBuildLocator.RegisterMSBuildPath(msbuildPath);
                                     vsFound = true;
                                     break;
@@ -76,24 +76,24 @@ class Program
                     
                     if (!vsFound)
                     {
-                        Console.WriteLine("错误：未找到 Visual Studio 2022 或更高版本。");
+                        Console.WriteLine("Error: Visual Studio 2022 or higher not found.");
                         Console.WriteLine("");
-                        Console.WriteLine("注意：vcxproj 文件需要 Visual Studio C++ 工具集，不能仅使用 .NET SDK。");
-                        Console.WriteLine("请确保已安装 Visual Studio 2022 并包含 '使用 C++ 的桌面开发' 工作负载。");
+                        Console.WriteLine("Note: vcxproj files require Visual Studio C++ toolset, .NET SDK alone is not sufficient.");
+                        Console.WriteLine("Please ensure Visual Studio 2022 is installed with the 'Desktop development with C++' workload.");
                         Console.WriteLine("");
-                        Console.WriteLine("如果 VS2022 已安装但未被检测到，您可以：");
-                        Console.WriteLine("1. 设置环境变量 VSINSTALLDIR 指向 VS 安装目录，例如：");
+                        Console.WriteLine("If VS2022 is installed but not detected, you can:");
+                        Console.WriteLine("1. Set the VSINSTALLDIR environment variable to point to your VS installation directory, e.g.:");
                         Console.WriteLine(@"   set VSINSTALLDIR=C:\Program Files\Microsoft Visual Studio\2022\Community\");
                         Console.WriteLine("");
-                        Console.WriteLine("2. 或重新运行 Visual Studio 安装程序，确保安装了 '使用 C++ 的桌面开发' 工作负载");
+                        Console.WriteLine("2. Or re-run the Visual Studio installer and ensure 'Desktop development with C++' workload is installed");
                         return 1;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"错误：无法注册 MSBuild - {ex.Message}");
-                Console.WriteLine($"详细错误：{ex}");
+                Console.WriteLine($"Error: Unable to register MSBuild - {ex.Message}");
+                Console.WriteLine($"Detailed error: {ex}");
                 return 1;
             }
         }
@@ -120,7 +120,7 @@ class Program
         {
             var instances = MSBuildLocator.QueryVisualStudioInstances().ToList();
             
-            // 筛选 VS2022+ (版本 17+) 且名称包含 "Visual Studio"
+            // Filter VS2022+ (version 17+) and name contains "Visual Studio"
             return instances
                 .Where(vs => vs.Version.Major >= 17 && vs.Name.Contains("Visual Studio"))
                 .OrderByDescending(vs => vs.Version)
@@ -133,90 +133,90 @@ class Program
     }
 }
 
-[Verb("list-configs", HelpText = "列出所有可用的配置组合")]
+[Verb("list-configs", HelpText = "List all available configuration combinations")]
 public class ListConfigsOptions
 {
-    [Value(0, Required = true, HelpText = "vcxproj 文件路径")]
+    [Value(0, Required = true, HelpText = "Path to the vcxproj file")]
     public string Project { get; set; } = "";
     
-    [Option('v', "verbose", HelpText = "详细输出")]
+    [Option('v', "verbose", HelpText = "Enable verbose output")]
     public bool Verbose { get; set; }
     
-    [Option("strict", HelpText = "严格模式，遇错即停")]
+    [Option("strict", HelpText = "Strict mode, stop on error")]
     public bool Strict { get; set; }
 }
 
-[Verb("list-units", HelpText = "列出所有编译单元（ClCompile）")]
+[Verb("list-units", HelpText = "List all compilation units (ClCompile)")]
 public class ListUnitsOptions
 {
-    [Value(0, Required = true, HelpText = "vcxproj 文件路径")]
+    [Value(0, Required = true, HelpText = "Path to the vcxproj file")]
     public string Project { get; set; } = "";
     
-    [Option('p', "platform", HelpText = "指定平台（如 x64, Win32）")]
+    [Option('p', "platform", HelpText = "Specify platform (e.g., x64, Win32)")]
     public string? Platform { get; set; }
     
-    [Option('c', "config", HelpText = "指定配置（如 Debug, Release）")]
+    [Option('c', "config", HelpText = "Specify configuration (e.g., Debug, Release)")]
     public string? Config { get; set; }
     
-    [Option('s', "solution-path", HelpText = "手动指定解决方案路径")]
+    [Option('s', "solution-path", HelpText = "Manually specify solution path")]
     public string? SolutionPath { get; set; }
     
-    [Option('v', "verbose", HelpText = "详细输出")]
+    [Option('v', "verbose", HelpText = "Enable verbose output")]
     public bool Verbose { get; set; }
     
-    [Option("strict", HelpText = "严格模式，遇错即停")]
+    [Option("strict", HelpText = "Strict mode, stop on error")]
     public bool Strict { get; set; }
 }
 
-[Verb("list-files", HelpText = "列出所有被引用的文件")]
+[Verb("list-files", HelpText = "List all referenced files")]
 public class ListFilesOptions
 {
-    [Value(0, Required = true, HelpText = "vcxproj 文件路径")]
+    [Value(0, Required = true, HelpText = "Path to the vcxproj file")]
     public string Project { get; set; } = "";
     
-    [Option('p', "platform", HelpText = "指定平台（如 x64, Win32）")]
+    [Option('p', "platform", HelpText = "Specify platform (e.g., x64, Win32)")]
     public string? Platform { get; set; }
     
-    [Option('c', "config", HelpText = "指定配置（如 Debug, Release）")]
+    [Option('c', "config", HelpText = "Specify configuration (e.g., Debug, Release)")]
     public string? Config { get; set; }
     
-    [Option('s', "solution-path", HelpText = "手动指定解决方案路径")]
+    [Option('s', "solution-path", HelpText = "Manually specify solution path")]
     public string? SolutionPath { get; set; }
     
-    [Option('v', "verbose", HelpText = "详细输出")]
+    [Option('v', "verbose", HelpText = "Enable verbose output")]
     public bool Verbose { get; set; }
     
-    [Option("strict", HelpText = "严格模式，遇错即停")]
+    [Option("strict", HelpText = "Strict mode, stop on error")]
     public bool Strict { get; set; }
 }
 
-[Verb("generate", HelpText = "生成配置文件")]
+[Verb("generate", HelpText = "Generate configuration file")]
 public class GenerateOptions
 {
-    [Value(0, Required = true, HelpText = "vcxproj 文件路径")]
+    [Value(0, Required = true, HelpText = "Path to the vcxproj file")]
     public string Project { get; set; } = "";
     
-    [Option('p', "platform", HelpText = "指定平台（如 x64, Win32）")]
+    [Option('p', "platform", HelpText = "Specify platform (e.g., x64, Win32)")]
     public string? Platform { get; set; }
     
-    [Option('c', "config", HelpText = "指定配置（如 Debug, Release）")]
+    [Option('c', "config", HelpText = "Specify configuration (e.g., Debug, Release)")]
     public string? Config { get; set; }
     
-    [Option('s', "solution-path", HelpText = "手动指定解决方案路径")]
+    [Option('s', "solution-path", HelpText = "Manually specify solution path")]
     public string? SolutionPath { get; set; }
     
-    [Option('v', "verbose", HelpText = "详细输出")]
+    [Option('v', "verbose", HelpText = "Enable verbose output")]
     public bool Verbose { get; set; }
     
-    [Option("strict", HelpText = "严格模式，遇错即停")]
+    [Option("strict", HelpText = "Strict mode, stop on error")]
     public bool Strict { get; set; }
     
-    [Option('f', "format", Default = "compile_commands", HelpText = "输出格式 (compile_commands 或 clangd)")]
+    [Option('f', "format", Default = "compile_commands", HelpText = "Output format (compile_commands or clangd)")]
     public string Format { get; set; } = "compile_commands";
     
-    [Option('o', "output", HelpText = "输出路径")]
+    [Option('o', "output", HelpText = "Output path")]
     public string? Output { get; set; }
     
-    [Option("compiler", HelpText = "指定编译器路径")]
+    [Option("compiler", HelpText = "Specify compiler path")]
     public string? Compiler { get; set; }
 }

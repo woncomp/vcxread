@@ -14,7 +14,7 @@ public static class ListFilesCommand
             
             var files = analyzer.GetAllReferencedFiles();
             
-            // 输出 JSON
+            // Output JSON
             var options = new JsonSerializerOptions { WriteIndented = true };
             var output = files.Select(f => new 
             {
@@ -29,7 +29,7 @@ public static class ListFilesCommand
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"错误: {ex.Message}");
+            Console.WriteLine($"Error: {ex.Message}");
             if (opts.Verbose) Console.WriteLine(ex.StackTrace);
             return opts.Strict ? 1 : 0;
         }

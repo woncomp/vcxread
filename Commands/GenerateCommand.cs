@@ -12,14 +12,14 @@ public static class GenerateCommand
         {
             if (opts.Format != "compile_commands" && opts.Format != "clangd")
             {
-                Console.WriteLine("错误: --format 必须是 'compile_commands' 或 'clangd'");
+                Console.WriteLine("Error: --format must be 'compile_commands' or 'clangd'");
                 return 1;
             }
             
             var analyzer = new VcxprojAnalyzer(opts.Project, opts.Verbose, opts.Strict);
             analyzer.LoadProject(opts.Config, opts.Platform, opts.SolutionPath);
             
-            // 确定输出路径
+            // Determine output path
             string outputPath;
             if (string.IsNullOrEmpty(opts.Output))
             {
@@ -27,7 +27,7 @@ public static class GenerateCommand
             }
             else
             {
-                // 智能判断：如果路径已存在且是目录，使用默认文件名
+                // Smart detection: if path exists and is a directory, use default filename
                 if (Directory.Exists(opts.Output))
                 {
                     var fileName = opts.Format == "compile_commands" ? "compile_commands.json" : ".clangd";
@@ -48,12 +48,12 @@ public static class GenerateCommand
                 GenerateClangdConfig(analyzer, outputPath, opts.Compiler);
             }
             
-            Console.WriteLine($"已生成: {outputPath}");
+            Console.WriteLine($"Generated: {outputPath}");
             return 0;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"错误: {ex.Message}");
+            Console.WriteLine($"Error: {ex.Message}");
             if (opts.Verbose) Console.WriteLine(ex.StackTrace);
             return opts.Strict ? 1 : 0;
         }
@@ -86,14 +86,14 @@ public static class GenerateCommand
         
         if (commands.Count == 0)
         {
-            throw new InvalidOperationException("没有找到编译单元");
+            throw new InvalidOperationException("No compilation units found");
         }
         
-        // 分析所有命令，提取通用参数
+        // Analyze all commands and extract common arguments
         var allArgs = new HashSet<string>();
         foreach (var cmd in commands)
         {
-            // 解析命令行参数
+            // Parse command line arguments
             var args = ParseCommandLine(cmd.Command);
             foreach (var arg in args.Where(a => a.StartsWith("/I") || a.StartsWith("/D") || a.StartsWith("/std:")))
             {
@@ -101,7 +101,7 @@ public static class GenerateCommand
             }
         }
         
-        // 生成 YAML 格式的 .clangd
+        // Generate YAML format .clangd
         var lines = new List<string>();
         lines.Add("CompileFlags:");
         lines.Add("  Add:");
