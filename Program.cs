@@ -8,6 +8,9 @@ class Program
 {
     static int Main(string[] args)
     {
+        // 检查是否有 verbose 参数（在解析参数前检查）
+        bool verbose = args.Contains("-v") || args.Contains("--verbose");
+        
         // 注册 MSBuild 定位器
         if (!MSBuildLocator.IsRegistered)
         {
@@ -17,7 +20,7 @@ class Program
                 var vsPath = Environment.GetEnvironmentVariable("VSINSTALLDIR");
                 if (!string.IsNullOrEmpty(vsPath) && Directory.Exists(vsPath))
                 {
-                    Console.WriteLine($"使用环境变量指定的 VS 路径: {vsPath}");
+                    if (verbose) Console.WriteLine($"使用环境变量指定的 VS 路径: {vsPath}");
                     // 尝试从该路径注册 MSBuild
                     var msbuildPath = Path.Combine(vsPath, "MSBuild", "Current", "Bin", "MSBuild.exe");
                     if (File.Exists(msbuildPath))
@@ -27,7 +30,7 @@ class Program
                     }
                     else
                     {
-                        Console.WriteLine($"错误：在 {vsPath} 中未找到 MSBuild");
+                        if (verbose) Console.WriteLine($"错误：在 {vsPath} 中未找到 MSBuild");
                         return 1;
                     }
                 }
@@ -57,7 +60,7 @@ class Program
                                 var msbuildPath = Path.Combine(path, "MSBuild", "Current", "Bin");
                                 if (Directory.Exists(msbuildPath))
                                 {
-                                    Console.WriteLine($"从常见路径找到 VS2022: {path}");
+                                    if (verbose) Console.WriteLine($"从常见路径找到 VS2022: {path}");
                                     MSBuildLocator.RegisterMSBuildPath(msbuildPath);
                                     vsFound = true;
                                     break;
