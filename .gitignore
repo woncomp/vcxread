@@ -1,0 +1,44 @@
+# .NET Core / .NET 5+ build outputs
+bin/
+obj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userprefs
+
+# Rider / IntelliJ
+.idea/
+*.sln.iml
+
+# Publish outputs
+publish/
+
+# Test outputs
+test*.json
+test*.clangd
+test*.ps1
+test_output.txt
+
+# Temporary files
+*.tmp
+*.temp
+nul
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# NuGet packages (if using packages directory)
+packages/
+
+# MSBuild logs
+*.log
+
+# Coverage reports
+coverage/
+*.coverage
+
+# Local development settings
+appsettings.Development.json
