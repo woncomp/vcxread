@@ -17,7 +17,7 @@ class Program
             try
             {
                 // 检查环境变量是否手动指定了 VS 路径
-                var vsPath = Environment.GetEnvironmentVariable("VSINSTALLDIR");
+                var vsPath = Environment.GetEnvironmentVariable("VSINSTALLDIR")?.Trim();
                 if (!string.IsNullOrEmpty(vsPath) && Directory.Exists(vsPath))
                 {
                     if (verbose) Console.WriteLine($"使用环境变量指定的 VS 路径: {vsPath}");
