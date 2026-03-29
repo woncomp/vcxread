@@ -15,11 +15,8 @@ obj/
 # Publish outputs
 publish/
 
-# Test outputs
-test*.json
-test*.clangd
-test*.ps1
-test_output.txt
+# Test outputs (now in test/ directory)
+test/
 
 # Temporary files
 *.tmp
